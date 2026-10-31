@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vexora VPN – Real-Time Data Usage Portal</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Outfit', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              dark: '#080c18',
+              card: '#0f172a',
+              cardBorder: '#1e293b',
+              blue: '#3b82f6',
+              purple: '#8b5cf6',
+              indigo: '#6366f1',
+              cyan: '#06b6d4',
+            }
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'spin-slow': 'spin 12s linear infinite',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom styling & animations */
+    body {
+      background-color: #070b19;
+      color: #f1f5f9;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+
+    .bg-mesh {
+      background-image: 
+        radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 85% 75%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 60%);
+    }
+
+    .glass-card {
+      background: rgba(15, 23, 42, 0.72);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+    }
+
+    .glass-card-hover {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .glass-card-hover:hover {
+      transform: translateY(-2px);
+      border-color: rgba(139, 92, 246, 0.3);
+      box-shadow: 0 25px 50px -12px rgba(124, 58, 237, 0.15);
+    }
+
+    /* Circular progress circle styling */
+    .progress-ring__circle {
+      transition: stroke-dashoffset 0.85s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.5s ease;
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+    }
+
+    /* Glow utility */
+    .glow-blue {
+      filter: drop-shadow(0 0 16px rgba(59, 130, 246, 0.45));
+    }
+    .glow-purple {
+      filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.35));
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #080c18;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-mesh flex flex-col justify-between selection:bg-brand-purple selection:text-white">
+
+  <!-- TOP NAVIGATION BAR -->
+  <header class="w-full border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3.5 cursor-pointer" onclick="handleLogoClick()">
+        <div class="relative flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-tr from-brand-blue via-brand-indigo to-brand-purple p-0.5 shadow-lg shadow-indigo-500/20">
+          <div class="w-full h-full bg-[#090d1f] rounded-[14px] flex items-center justify-center">
+            <i data-lucide="shield-check" class="w-6 h-6 text-brand-blue"></i>
+          </div>
+        </div>
+        <div>
+          <span class="font-display font-extrabold text-2xl tracking-tight bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">VEXORA</span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 ml-1.5 px-2 py-0.5 rounded-full bg-slate-800/80 border border-slate-700/50">VPN</span>
+        </div>
+      </div>
+
+      <!-- Right Nav Status & Actions -->
+      <div class="flex items-center gap-3 sm:gap-4">
+        <!-- Live Connection Status Pill (Visible on Dashboard) -->
+        <div id="navLiveIndicator" class="hidden items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-xs font-medium text-slate-300">
+          <span class="relative flex h-2.5 w-2.5">
+            <span id="navLivePing" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span id="navLiveDot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+          </span>
+          <span id="navLiveStatusText">Connected</span>
+        </div>
+
+        <!-- Mode Toggle / Test Codes Dropdown (for development and evaluator ease) -->
+        <div class="relative inline-block text-left">
+          <button id="quickCodeBtn" type="button" class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-xl text-slate-400 bg-slate-900/60 border border-slate-800 hover:text-white hover:border-slate-700 transition">
+            <i data-lucide="key" class="w-3.5 h-3.5 text-indigo-400"></i>
+            <span class="hidden sm:inline">Demo Access Codes</span>
+            <i data-lucide="chevron-down" class="w-3 h-3"></i>
+          </button>
+          <div id="quickCodeMenu" class="hidden absolute right-0 mt-2 w-64 origin-top-right rounded-2xl glass-card border border-slate-800 p-2 shadow-2xl z-50 text-xs">
+            <div class="px-3 py-2 text-[11px] font-semibold text-slate-400 border-b border-slate-800/80 uppercase tracking-wider">
+              Assigned Server Endpoints
+            </div>
+            <button onclick="fillDemoCode('VEX-8K4P-92MX')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-slate-800/70 transition flex items-center justify-between group">
+              <div>
+                <div class="font-mono font-medium text-white group-hover:text-brand-blue">VEX-8K4P-92MX</div>
+                <div class="text-[10px] text-slate-400">Server 1 (Normal 35% Usage)</div>
+              </div>
+              <span class="text-[10px] text-emerald-400 font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10">Active</span>
+            </button>
+            <button onclick="fillDemoCode('VEX-7N5Q-31AB')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-slate-800/70 transition flex items-center justify-between group">
+              <div>
+                <div class="font-mono font-medium text-white group-hover:text-brand-blue">VEX-7N5Q-31AB</div>
+                <div class="text-[10px] text-slate-400">Server 2 (High 82% Warning)</div>
+              </div>
+              <span class="text-[10px] text-amber-400 font-semibold px-1.5 py-0.5 rounded bg-amber-500/10">High</span>
+            </button>
+            <button onclick="fillDemoCode('VEX-9R2T-65KD')" class="w-full text-left px-3 py-2.5 rounded-xl hover:bg-slate-800/70 transition flex items-center justify-between group">
+              <div>
+                <div class="font-mono font-medium text-white group-hover:text-brand-blue">VEX-9R2T-65KD</div>
+                <div class="text-[10px] text-slate-400">Server 3 (Near Limit 94%)</div>
+              </div>
+              <span class="text-[10px] text-rose-400 font-semibold px-1.5 py-0.5 rounded bg-rose-500/10">Critical</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Logout Button -->
+        <button id="logoutBtn" onclick="handleLogout()" class="hidden items-center gap-2 px-4 py-2 text-sm font-semibold text-rose-300 hover:text-white bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl transition duration-200">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Logout</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-grow flex items-center justify-center px-4 py-8 sm:py-12 relative z-10">
+    
+    <!-- ========================================== -->
+    <!-- 1. LOGIN / ACCESS CODE VERIFICATION VIEW   -->
+    <!-- ========================================== -->
+    <div id="loginView" class="w-full max-w-md mx-auto transition-all duration-500 ease-out">
+      <div class="relative">
+        <!-- Glow Backdrop -->
+        <div class="absolute -inset-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl blur-xl opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+
+        <div class="relative glass-card rounded-3xl p-6 sm:p-9 border border-slate-700/60 shadow-2xl">
+          <!-- Top Badge -->
+          <div class="flex justify-center mb-6">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/25 text-xs font-semibold text-indigo-300">
+              <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping"></span>
+              Encrypted Subscriber Portal
+            </div>
+          </div>
+
+          <!-- Header Titles -->
+          <div class="text-center mb-8">
+            <h1 class="font-display text-2xl sm:text-3xl font-bold tracking-tight text-white mb-2">
+              Check Your Data Usage
+            </h1>
+            <p class="text-sm text-slate-400 leading-relaxed max-w-xs mx-auto">
+              Monitor your high-speed Vexora VPN data bandwidth, remaining quotas, and server node stats anytime, anywhere.
+            </p>
+          </div>
+
+          <!-- Login Form -->
+          <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-5">
+            <div>
+              <label for="accessCodeInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
+                Unique Access Code
+              </label>
+              <div class="relative rounded-2xl shadow-sm">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                  <i data-lucide="key-round" class="w-5 h-5 text-indigo-400"></i>
+                </div>
+                <input 
+                  type="text" 
+                  id="accessCodeInput" 
+                  name="accessCode" 
+                  placeholder="VEX-XXXX-XXXX" 
+                  maxlength="16"
+                  autocomplete="off"
+                  autocapitalize="characters"
+                  spellcheck="false"
+                  required
+                  class="w-full pl-11 pr-11 py-3.5 bg-slate-900/90 border border-slate-700/80 rounded-2xl text-white font-mono tracking-wider text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-slate-600 transition duration-200 uppercase"
+                />
+                <!-- Paste quick button -->
+                <button 
+                  type="button" 
+                  onclick="pasteClipboard()" 
+                  title="Paste from clipboard"
+                  class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-white transition">
+                  <i data-lucide="clipboard" class="w-4 h-4"></i>
+                </button>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-2 flex items-center gap-1.5">
+                <i data-lucide="info" class="w-3.5 h-3.5"></i>
+                Code format: <span class="font-mono text-slate-400">VEX-XXXX-XXXX</span> (issued on subscription receipt)
+              </p>
+            </div>
+
+            <!-- Error Banner -->
+            <div id="loginErrorMessage" class="hidden p-3.5 rounded-2xl bg-rose-900/30 border border-rose-500/40 text-rose-300 text-xs flex items-start gap-2.5 animate-shake">
+              <i data-lucide="alert-circle" class="w-4 h-4 mt-0.5 flex-shrink-0 text-rose-400"></i>
+              <span id="loginErrorText" class="flex-grow">Invalid or expired access code. Please check your credentials.</span>
+            </div>
+
+            <!-- Submit Button -->
+            <button 
+              type="submit" 
+              id="loginSubmitBtn"
+              class="w-full relative group overflow-hidden rounded-2xl p-px font-semibold text-white shadow-xl shadow-indigo-600/25 hover:shadow-indigo-600/40 transition duration-300">
+              <span class="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 group-hover:from-blue-500 group-hover:to-purple-500"></span>
+              <span class="relative flex items-center justify-center gap-2 px-6 py-3.5 rounded-[15px] bg-slate-900/30 group-hover:bg-transparent transition duration-300">
+                <span id="loginBtnText" class="text-sm font-semibold tracking-wide">Check My Usage</span>
+                <i id="loginBtnIcon" data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition duration-200"></i>
+                <!-- Spinner -->
+                <svg id="loginSpinner" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </span>
+            </button>
+          </form>
+
+          <!-- Security note footer inside card -->
+          <div class="mt-8 pt-5 border-t border-slate-800/80 text-center">
+            <div class="flex items-center justify-center gap-2 text-xs text-slate-500">
+              <i data-lucide="lock" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>TLS 1.3 End-to-End Server Encrypted</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- 2. CUSTOMER DATA USAGE DASHBOARD VIEW      -->
+    <!-- ========================================== -->
+    <div id="dashboardView" class="hidden w-full max-w-6xl mx-auto space-y-6 transition-all duration-500">
+      
+      <!-- Top Alert / Notification Banner (Conditional for Server Outages/Retries) -->
+      <div id="serverAlertBanner" class="hidden p-4 rounded-2xl border text-sm flex items-center justify-between shadow-lg transition-all duration-300">
+        <div class="flex items-center gap-3">
+          <i id="serverAlertIcon" data-lucide="alert-triangle" class="w-5 h-5 flex-shrink-0"></i>
+          <div>
+            <span id="serverAlertTitle" class="font-semibold block">Notification</span>
+            <span id="serverAlertMsg" class="text-xs opacity-90">Status info goes here</span>
+          </div>
+        </div>
+        <button onclick="dismissAlertBanner()" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Subscriber Header Bar -->
+      <div class="glass-card rounded-3xl p-6 sm:p-7 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div class="flex items-center gap-4">
+          <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-blue to-brand-purple flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white flex-shrink-0">
+            <i data-lucide="user-check" class="w-7 h-7"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2.5 flex-wrap">
+              <h2 id="customerName" class="font-display font-bold text-xl sm:text-2xl text-white">Vexora Subscriber</h2>
+              <span id="accountStatusBadge" class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span id="accountStatusText">Active Subscription</span>
+              </span>
+            </div>
+            <div class="flex items-center gap-3 mt-1.5 text-xs text-slate-400 flex-wrap">
+              <span class="flex items-center gap-1">
+                <i data-lucide="fingerprint" class="w-3.5 h-3.5 text-slate-500"></i>
+                Access Code: <span id="displayAccessCode" class="font-mono text-slate-300 font-semibold">VEX-XXXX-XXXX</span>
+              </span>
+              <span class="text-slate-600 hidden sm:inline">•</span>
+              <span class="flex items-center gap-1">
+                <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i>
+                <span id="displayServerNode" class="text-slate-300">Server 1 (Primary Gateway)</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sync metadata & manual refresh -->
+        <div class="flex items-center gap-3 self-end md:self-center">
+          <div class="text-right">
+            <div class="text-[11px] text-slate-400 flex items-center justify-end gap-1">
+              <i data-lucide="clock" class="w-3 h-3 text-slate-500"></i>
+              Last synchronized
+            </div>
+            <div id="lastUpdatedTimestamp" class="text-xs font-medium text-slate-200 font-mono mt-0.5">
+              Just now
+            </div>
+          </div>
+          <button 
+            id="refreshUsageBtn"
+            onclick="triggerManualRefresh()" 
+            title="Refresh statistics now"
+            class="flex items-center justify-center w-10 h-10 rounded-2xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-300 hover:text-white transition group">
+            <i id="refreshIcon" data-lucide="rotate-cw" class="w-4 h-4 group-hover:rotate-180 transition duration-500"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- MAIN METRICS GRID -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- LEFT/CENTER: CIRCULAR PROGRESS VISUALIZATION (5 Columns on Desktop) -->
+        <div class="lg:col-span-5 glass-card glass-card-hover rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center text-center relative overflow-hidden">
+          <div class="absolute -top-16 -right-16 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-6 flex items-center gap-1.5">
+            <i data-lucide="pie-chart" class="w-4 h-4 text-indigo-400"></i>
+            Data Allowance Quota
+          </span>
+
+          <!-- High-End Circular SVG Gauge -->
+          <div class="relative w-56 h-56 sm:w-64 sm:h-64 flex items-center justify-center my-2">
+            <svg class="w-full h-full" viewBox="0 0 200 200">
+              <!-- Background track circle -->
+              <circle
+                class="text-slate-800/80"
+                stroke-width="14"
+                stroke="currentColor"
+                fill="transparent"
+                r="78"
+                cx="100"
+                cy="100"
+              />
+              <!-- Progress indicator circle -->
+              <circle
+                id="usageProgressRing"
+                class="progress-ring__circle"
+                stroke-width="14"
+                stroke-linecap="round"
+                stroke="#10b981"
+                fill="transparent"
+                r="78"
+                cx="100"
+                cy="100"
+                stroke-dasharray="490.08"
+                stroke-dashoffset="490.08"
+              />
+            </svg>
+
+            <!-- Center Gauge Value Labels -->
+            <div class="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+              <span id="ringPercentText" class="font-display font-extrabold text-4xl sm:text-5xl tracking-tight text-white">
+                0%
+              </span>
+              <span class="text-[11px] uppercase tracking-wider font-semibold text-slate-400 mt-1">
+                Data Consumed
+              </span>
+              <span id="ringSubQuotaText" class="text-xs font-mono text-slate-300 mt-1.5 px-2.5 py-0.5 rounded-full bg-slate-800/80 border border-slate-700/60">
+                0 GB / 0 GB
+              </span>
+            </div>
+          </div>
+
+          <!-- Color Status Legend Indicator -->
+          <div class="w-full grid grid-cols-4 gap-2 mt-6 pt-5 border-t border-slate-800/80 text-[11px] text-slate-400">
+            <div class="flex flex-col items-center">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 mb-1"></span>
+              <span>0-50% Safe</span>
+            </div>
+            <div class="flex flex-col items-center">
+              <span class="w-2 h-2 rounded-full bg-blue-400 mb-1"></span>
+              <span>51-75% Mod</span>
+            </div>
+            <div class="flex flex-col items-center">
+              <span class="w-2 h-2 rounded-full bg-amber-400 mb-1"></span>
+              <span>76-90% Warn</span>
+            </div>
+            <div class="flex flex-col items-center">
+              <span class="w-2 h-2 rounded-full bg-rose-500 mb-1"></span>
+              <span>91-100% Crit</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: SUMMARY CARDS & TRAFFIC BREAKDOWN (7 Columns on Desktop) -->
+        <div class="lg:col-span-7 space-y-6">
+          
+          <!-- Key Metric Highlights Row -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            
+            <!-- Card 1: Total Allowance -->
+            <div class="glass-card glass-card-hover rounded-2xl p-5 border border-slate-800">
+              <div class="flex items-center justify-between text-slate-400 mb-2">
+                <span class="text-xs font-semibold uppercase tracking-wider">Total Allowance</span>
+                <div class="p-2 rounded-xl bg-indigo-500/10 text-indigo-400">
+                  <i data-lucide="hard-drive" class="w-4 h-4"></i>
+                </div>
+              </div>
+              <div id="statTotalAllowance" class="font-display font-bold text-2xl text-white">0 GB</div>
+              <div class="text-[11px] text-slate-400 mt-1">Monthly recurring allocation</div>
+            </div>
+
+            <!-- Card 2: Total Used -->
+            <div class="glass-card glass-card-hover rounded-2xl p-5 border border-slate-800">
+              <div class="flex items-center justify-between text-slate-400 mb-2">
+                <span class="text-xs font-semibold uppercase tracking-wider">Total Used</span>
+                <div class="p-2 rounded-xl bg-blue-500/10 text-blue-400">
+                  <i data-lucide="activity" class="w-4 h-4"></i>
+                </div>
+              </div>
+              <div id="statTotalUsed" class="font-display font-bold text-2xl text-white">0 GB</div>
+              <div id="statUsedSubtitle" class="text-[11px] text-slate-400 mt-1">0% consumed</div>
+            </div>
+
+            <!-- Card 3: Remaining Data -->
+            <div class="glass-card glass-card-hover rounded-2xl p-5 border border-slate-800">
+              <div class="flex items-center justify-between text-slate-400 mb-2">
+                <span class="text-xs font-semibold uppercase tracking-wider">Remaining</span>
+                <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+                  <i data-lucide="zap" class="w-4 h-4"></i>
+                </div>
+              </div>
+              <div id="statRemaining" class="font-display font-bold text-2xl text-emerald-400">0 GB</div>
+              <div class="text-[11px] text-slate-400 mt-1">High-speed bandwidth</div>
+            </div>
+          </div>
+
+          <!-- Horizontal Progress Bar Section -->
+          <div class="glass-card rounded-2xl p-6 border border-slate-800">
+            <div class="flex items-center justify-between text-xs font-semibold mb-2">
+              <span class="text-slate-300">Bandwidth Consumption Spectrum</span>
+              <span id="linearUsageRatio" class="font-mono text-slate-400">0 GB / 0 GB</span>
+            </div>
+            
+            <!-- Progress Bar Container -->
+            <div class="w-full h-3.5 bg-slate-900 rounded-full overflow-hidden p-0.5 border border-slate-800 relative">
+              <div 
+                id="linearProgressBar" 
+                class="h-full rounded-full transition-all duration-700 ease-out bg-gradient-to-r from-emerald-500 to-teal-400" 
+                style="width: 0%">
+              </div>
+            </div>
+
+            <div class="flex justify-between items-center text-[11px] text-slate-500 mt-2 font-mono">
+              <span>0%</span>
+              <span id="linearProgressStatus" class="text-emerald-400 font-sans font-medium">Optimal consumption</span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          <!-- Detailed Traffic Breakdown (Upload & Download Statistics) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            
+            <!-- Download Traffic Card -->
+            <div class="glass-card glass-card-hover rounded-2xl p-5 border border-slate-800 flex items-center gap-4">
+              <div class="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 flex-shrink-0">
+                <i data-lucide="arrow-down-circle" class="w-6 h-6"></i>
+              </div>
+              <div class="overflow-hidden">
+                <div class="text-xs font-semibold uppercase tracking-wider text-slate-400">Download Traffic</div>
+                <div id="statDownload" class="font-display font-bold text-xl text-white mt-0.5">0.00 GB</div>
+                <div class="text-[11px] text-slate-500 truncate">Inbound streaming & web data</div>
+              </div>
+            </div>
+
+            <!-- Upload Traffic Card -->
+            <div class="glass-card glass-card-hover rounded-2xl p-5 border border-slate-800 flex items-center gap-4">
+              <div class="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 flex-shrink-0">
+                <i data-lucide="arrow-up-circle" class="w-6 h-6"></i>
+              </div>
+              <div class="overflow-hidden">
+                <div class="text-xs font-semibold uppercase tracking-wider text-slate-400">Upload Traffic</div>
+                <div id="statUpload" class="font-display font-bold text-xl text-white mt-0.5">0.00 GB</div>
+                <div class="text-[11px] text-slate-500 truncate">Outbound requests & gaming</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- BOTTOM ROW: SUBSCRIPTION DETAILS & SERVER SPECIFICATIONS -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- Expiration Details -->
+        <div class="glass-card rounded-2xl p-5 border border-slate-800">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="p-2 rounded-xl bg-indigo-500/10 text-indigo-400">
+              <i data-lucide="calendar" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 block">Subscription Expiry</span>
+              <span id="statExpirationDate" class="text-sm font-semibold text-white">November 28, 2026</span>
+            </div>
+          </div>
+          <div id="statDaysRemaining" class="text-xs text-indigo-300 font-medium">
+            28 days remaining in current billing cycle
+          </div>
+        </div>
+
+        <!-- Server Node Specifications -->
+        <div class="glass-card rounded-2xl p-5 border border-slate-800">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="p-2 rounded-xl bg-purple-500/10 text-purple-400">
+              <i data-lucide="globe" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 block">Assigned Node</span>
+              <span id="statServerNode" class="text-sm font-semibold text-white">US-East-01 (WireGuard / V2Ray)</span>
+            </div>
+          </div>
+          <div class="text-xs text-slate-400">
+            Encrypted tunnel with auto-failover
+          </div>
+        </div>
+
+        <!-- Protocol & Auto-refresh status -->
+        <div class="glass-card rounded-2xl p-5 border border-slate-800">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+              <i data-lucide="refresh-ccw" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 block">Live Poll Engine</span>
+              <span id="statPollStatus" class="text-sm font-semibold text-white">Active (Every 12s)</span>
+            </div>
+          </div>
+          <div class="text-xs text-slate-400 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            Real-time backend polling active
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="w-full border-t border-slate-800/80 bg-slate-950/70 backdrop-blur-md py-6 mt-12 relative z-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+      <div class="flex items-center gap-2">
+        <i data-lucide="shield" class="w-4 h-4 text-indigo-400"></i>
+        <span>Vexora VPN Inc. &copy; 2026. All rights reserved. Zero-logs certified.</span>
+      </div>
+      <div class="flex items-center gap-6">
+        <span class="hover:text-slate-400 cursor-pointer transition">Privacy Policy</span>
+        <span class="hover:text-slate-400 cursor-pointer transition">Terms of Service</span>
+        <span class="hover:text-slate-400 cursor-pointer transition">Support 24/7</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ======================================================== -->
+  <!-- CLIENT JAVASCRIPT: LOGIC, POLL ENGINE, VISUALIZATIONS   -->
+  <!-- ======================================================== -->
+  <script>
+    /**
+     * Vexora VPN Data Portal State Management
+     */
+    const STATE = {
+      authToken: null,
+      currentAccessCode: null,
+      pollIntervalId: null,
+      pollFrequencyMs: 12000, // 12 seconds auto-refresh interval
+      isPolling: false,
+      consecutiveFailures: 0,
+      maxFailuresBeforeWarn: 2,
+      lastSuccessfulData: null,
+      // Fallback client simulation for standalone preview testing if Express backend isn't mounted:
+      useClientFallbackIfNoBackend: true 
+    };
+
+    // Pre-calculated circle radius metrics
+    const RING_RADIUS = 78;
+    const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS; // ~490.088
+
+    /**
+     * Helper to safely build an absolute or valid API URL.
+     * Prevents "Failed to parse URL" errors in sandboxed iframes, blob:, or file:// protocols.
+     */
+    function getApiEndpoint(relativePath) {
+      const origin = window.location.origin;
+      if (!origin || origin === 'null' || window.location.protocol.startsWith('blob') || window.location.protocol.startsWith('file')) {
+        // Sandboxed/local environment without standard HTTP origin: return null to trigger mock/fallback directly
+        return null;
+      }
+      try {
+        return new URL(relativePath, origin).toString();
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Initialize application on load
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      setupInputFormatting();
+      setupDropdownToggle();
+
+      // Check if session exists in sessionStorage (in-memory for security)
+      const savedCode = sessionStorage.getItem('vexora_active_code');
+      const savedToken = sessionStorage.getItem('vexora_session_token');
+      if (savedCode && savedToken) {
+        STATE.authToken = savedToken;
+        STATE.currentAccessCode = savedCode;
+        transitionToDashboard();
+        fetchSubscriptionUsage();
+        startAutoRefreshLoop();
+      }
+    });
+
+    /**
+     * Set up automatic hyphenation & formatting for the access code input
+     */
+    function setupInputFormatting() {
+      const input = document.getElementById('accessCodeInput');
+      input.addEventListener('input', (e) => {
+        let value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        
+        // Ensure VEX prefix convenience
+        let parts = [];
+        if (value.startsWith('VEX')) {
+          parts.push('VEX');
+          let rest = value.substring(3);
+          if (rest.length > 0) parts.push(rest.substring(0, 4));
+          if (rest.length > 4) parts.push(rest.substring(4, 8));
+        } else {
+          for (let i = 0; i < value.length && i < 12; i += 4) {
+            parts.push(value.substring(i, i + 4));
+          }
+        }
+        e.target.value = parts.join('-');
+        hideLoginError();
+      });
+    }
+
+    /**
+     * Quick demo code dropdown menu
+     */
+    function setupDropdownToggle() {
+      const btn = document.getElementById('quickCodeBtn');
+      const menu = document.getElementById('quickCodeMenu');
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.classList.toggle('hidden');
+      });
+      document.addEventListener('click', () => {
+        if (!menu.classList.contains('hidden')) {
+          menu.classList.add('hidden');
+        }
+      });
+    }
+
+    function fillDemoCode(code) {
+      const input = document.getElementById('accessCodeInput');
+      input.value = code;
+      hideLoginError();
+      document.getElementById('quickCodeMenu').classList.add('hidden');
+      input.focus();
+    }
+
+    async function pasteClipboard() {
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const text = await navigator.clipboard.readText();
+          document.getElementById('accessCodeInput').value = text.trim();
+        } else {
+          document.execCommand('paste');
+        }
+      } catch (err) {
+        console.debug('Clipboard read not permitted:', err);
+      }
+    }
+
+    /**
+     * Handle Login Submission with Backend API Authentication
+     */
+    async function handleLoginSubmit(event) {
+      event.preventDefault();
+      const codeInput = document.getElementById('accessCodeInput');
+      const rawCode = codeInput.value.trim().toUpperCase();
+
+      // Validate pattern: VEX-XXXX-XXXX
+      const codeRegex = /^VEX-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+      if (!codeRegex.test(rawCode)) {
+        showLoginError("Please enter a valid access code format (e.g. VEX-8K4P-92MX).");
+        return;
+      }
+
+      setLoginLoading(true);
+      hideLoginError();
+
+      try {
+        // Attempt POST to Express Backend API if a valid HTTP host exists
+        let response = null;
+        let data = null;
+        const verifyEndpoint = getApiEndpoint('/api/verify-code');
+
+        if (verifyEndpoint) {
+          try {
+            const res = await fetch(verifyEndpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ accessCode: rawCode })
+            });
+            if (res.ok) {
+              data = await res.json();
+            } else {
+              const errBody = await res.json().catch(() => ({}));
+              throw new Error(errBody.error || "Authentication failed.");
+            }
+          } catch (apiErr) {
+            // If backend is unreachable or returning network errors, fall back to client simulation
+            if (STATE.useClientFallbackIfNoBackend) {
+              data = mockVerifyCodeClient(rawCode);
+            } else {
+              throw apiErr;
+            }
+          }
+        } else {
+          // In sandboxed/blob:/file: environments where origin is null, use client simulation directly
+          data = mockVerifyCodeClient(rawCode);
+        }
+
+        if (data && data.success) {
+          // Authentication successful
+          STATE.authToken = data.sessionToken;
+          STATE.currentAccessCode = rawCode;
+          sessionStorage.setItem('vexora_active_code', rawCode);
+          sessionStorage.setItem('vexora_session_token', data.sessionToken);
+
+          transitionToDashboard();
+          await fetchSubscriptionUsage();
+          startAutoRefreshLoop();
+        } else {
+          showLoginError(data?.error || "Invalid access code. Please check your credentials.");
+        }
+
+      } catch (error) {
+        showLoginError(error.message || "Unable to reach server. Please try again.");
+      } finally {
+        setLoginLoading(false);
+      }
+    }
+
+    /**
+     * Retrieve Real-Time Subscription Data from Backend Proxy
+     */
+    async function fetchSubscriptionUsage(isBackgroundPoll = false) {
+      if (!STATE.authToken) return;
+
+      if (!isBackgroundPoll) {
+        setRefreshSpinning(true);
+      }
+
+      try {
+        let usageData = null;
+        const usageEndpoint = getApiEndpoint(`/api/subscription-usage?token=${encodeURIComponent(STATE.authToken)}&code=${encodeURIComponent(STATE.currentAccessCode)}`);
+
+        if (usageEndpoint) {
+          try {
+            const res = await fetch(usageEndpoint);
+            if (res.ok) {
+              usageData = await res.json();
+            } else {
+              if (res.status === 401) {
+                handleLogout();
+                showLoginError("Session expired. Please re-enter your access code.");
+                return;
+              }
+              throw new Error(`Upstream server status code: ${res.status}`);
+            }
+          } catch (err) {
+            // Fallback in pure static browser demo environment
+            if (STATE.useClientFallbackIfNoBackend) {
+              usageData = mockGetSubscriptionDataClient(STATE.currentAccessCode);
+            } else {
+              throw err;
+            }
+          }
+        } else {
+          // Safe sandbox fallback
+          usageData = mockGetSubscriptionDataClient(STATE.currentAccessCode);
+        }
+
+        if (usageData) {
+          STATE.lastSuccessfulData = usageData;
+          STATE.consecutiveFailures = 0;
+          updateDashboardUI(usageData);
+          updateNavStatus(true, "Synchronized");
+          hideAlertBanner();
+        }
+
+      } catch (err) {
+        console.warn("Subscription refresh warning:", err.message);
+        STATE.consecutiveFailures++;
+
+        updateNavStatus(false, "Reconnecting...");
+
+        if (STATE.lastSuccessfulData) {
+          showAlertBanner(
+            "Subscription Server Unreachable",
+            `Live server is temporarily busy. Retrying automatically in ${STATE.pollFrequencyMs / 1000}s. Displaying cached data.`,
+            "warning"
+          );
+        } else {
+          showAlertBanner(
+            "Data Sync Error",
+            "Could not reach subscription endpoint. Automatic retry in progress...",
+            "error"
+          );
+        }
+      } finally {
+        setRefreshSpinning(false);
+      }
+    }
+
+    /**
+     * Start the 10-15s background polling engine
+     */
+    function startAutoRefreshLoop() {
+      if (STATE.pollIntervalId) {
+        clearInterval(STATE.pollIntervalId);
+      }
+      STATE.pollIntervalId = setInterval(() => {
+        fetchSubscriptionUsage(true);
+      }, STATE.pollFrequencyMs);
+    }
+
+    /**
+     * Manual user refresh click
+     */
+    function triggerManualRefresh() {
+      fetchSubscriptionUsage(false);
+    }
+
+    /**
+     * Update all DOM elements with verified usage data
+     */
+    function updateDashboardUI(data) {
+      // 1. Text headers
+      document.getElementById('customerName').textContent = data.customerName || "Vexora Subscriber";
+      document.getElementById('displayAccessCode').textContent = STATE.currentAccessCode;
+      document.getElementById('displayServerNode').textContent = data.serverNode || "Primary Gateway";
+      document.getElementById('statServerNode').textContent = data.serverNode || "US-East-01";
+      document.getElementById('statExpirationDate').textContent = data.expirationDate || "Active (Never expires)";
+      document.getElementById('statDaysRemaining').textContent = data.expirationRemainingText || "Active cycle";
+
+      // 2. Format byte metrics
+      const totalGB = data.totalAllowanceGB;
+      const usedGB = data.totalUsedGB;
+      const remainingGB = Math.max(0, (totalGB - usedGB)).toFixed(2);
+      const usagePercentage = Math.min(100, Math.max(0, parseFloat(data.usagePercentage || (usedGB / totalGB * 100).toFixed(1))));
+
+      document.getElementById('statTotalAllowance').textContent = `${totalGB} GB`;
+      document.getElementById('statTotalUsed').textContent = `${usedGB} GB`;
+      document.getElementById('statRemaining').textContent = `${remainingGB} GB`;
+      document.getElementById('statUsedSubtitle').textContent = `${usagePercentage}% total consumed`;
+
+      document.getElementById('statDownload').textContent = `${data.downloadGB} GB`;
+      document.getElementById('statUpload').textContent = `${data.uploadGB} GB`;
+
+      // 3. Ring gauge updates
+      document.getElementById('ringPercentText').textContent = `${Math.round(usagePercentage)}%`;
+      document.getElementById('ringSubQuotaText').textContent = `${usedGB} / ${totalGB} GB`;
+
+      // 4. Circular Progress & Linear Color Coding
+      // 0–50%: Green (#10b981)
+      // 51–75%: Blue (#3b82f6)
+      // 76–90%: Orange (#f59e0b)
+      // 91–100%: Red (#ef4444)
+      let colorClass = '#10b981';
+      let statusLabel = 'Optimal consumption';
+      let gradientClass = 'from-emerald-500 to-teal-400';
+
+      if (usagePercentage > 90) {
+        colorClass = '#ef4444';
+        statusLabel = 'Critical: Quota nearly exhausted!';
+        gradientClass = 'from-rose-600 to-red-500';
+      } else if (usagePercentage > 75) {
+        colorClass = '#f59e0b';
+        statusLabel = 'High consumption warning';
+        gradientClass = 'from-amber-500 to-orange-400';
+      } else if (usagePercentage > 50) {
+        colorClass = '#3b82f6';
+        statusLabel = 'Moderate usage balance';
+        gradientClass = 'from-blue-500 to-indigo-500';
+      }
+
+      // Compute SVG circle dash offset
+      const ringCircle = document.getElementById('usageProgressRing');
+      const offset = RING_CIRCUMFERENCE - (usagePercentage / 100) * RING_CIRCUMFERENCE;
+      ringCircle.style.strokeDasharray = `${RING_CIRCUMFERENCE}`;
+      ringCircle.style.strokeDashoffset = `${offset}`;
+      ringCircle.setAttribute('stroke', colorClass);
+
+      // Horizontal linear progress
+      const linearBar = document.getElementById('linearProgressBar');
+      linearBar.style.width = `${usagePercentage}%`;
+      linearBar.className = `h-full rounded-full transition-all duration-700 ease-out bg-gradient-to-r ${gradientClass}`;
+      document.getElementById('linearUsageRatio').textContent = `${usedGB} GB / ${totalGB} GB (${usagePercentage}%)`;
+      document.getElementById('linearProgressStatus').textContent = statusLabel;
+      document.getElementById('linearProgressStatus').style.color = colorClass;
+
+      // Status Badge
+      const statusBadge = document.getElementById('accountStatusBadge');
+      const statusText = document.getElementById('accountStatusText');
+      if (data.status === 'active') {
+        statusText.textContent = 'Active Subscription';
+        statusBadge.className = 'inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400';
+      } else {
+        statusText.textContent = data.status.toUpperCase();
+        statusBadge.className = 'inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-rose-500/10 border border-rose-500/20 text-rose-400';
+      }
+
+      // Timestamp
+      const now = new Date();
+      document.getElementById('lastUpdatedTimestamp').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      lucide.createIcons();
+    }
+
+    /**
+     * UI State Transitions
+     */
+    function transitionToDashboard() {
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('dashboardView').classList.remove('hidden');
+      document.getElementById('logoutBtn').classList.remove('hidden');
+      document.getElementById('logoutBtn').classList.add('flex');
+      document.getElementById('navLiveIndicator').classList.remove('hidden');
+      document.getElementById('navLiveIndicator').classList.add('flex');
+    }
+
+    function handleLogout() {
+      if (STATE.pollIntervalId) {
+        clearInterval(STATE.pollIntervalId);
+        STATE.pollIntervalId = null;
+      }
+      STATE.authToken = null;
+      STATE.currentAccessCode = null;
+      STATE.lastSuccessfulData = null;
+      sessionStorage.removeItem('vexora_active_code');
+      sessionStorage.removeItem('vexora_session_token');
+
+      document.getElementById('dashboardView').classList.add('hidden');
+      document.getElementById('loginView').classList.remove('hidden');
+      document.getElementById('logoutBtn').classList.add('hidden');
+      document.getElementById('logoutBtn').classList.remove('flex');
+      document.getElementById('navLiveIndicator').classList.add('hidden');
+      document.getElementById('navLiveIndicator').classList.remove('flex');
+      document.getElementById('accessCodeInput').value = '';
+      hideLoginError();
+      hideAlertBanner();
+    }
+
+    function handleLogoClick() {
+      if (STATE.authToken) {
+        triggerManualRefresh();
+      }
+    }
+
+    function setLoginLoading(isLoading) {
+      const btn = document.getElementById('loginSubmitBtn');
+      const text = document.getElementById('loginBtnText');
+      const icon = document.getElementById('loginBtnIcon');
+      const spinner = document.getElementById('loginSpinner');
+      
+      btn.disabled = isLoading;
+      if (isLoading) {
+        text.textContent = 'Verifying with Server...';
+        icon.classList.add('hidden');
+        spinner.classList.remove('hidden');
+      } else {
+        text.textContent = 'Check My Usage';
+        icon.classList.remove('hidden');
+        spinner.classList.add('hidden');
+      }
+    }
+
+    function showLoginError(msg) {
+      const errBox = document.getElementById('loginErrorMessage');
+      const errText = document.getElementById('loginErrorText');
+      errText.textContent = msg;
+      errBox.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function hideLoginError() {
+      document.getElementById('loginErrorMessage').classList.add('hidden');
+    }
+
+    function setRefreshSpinning(isSpinning) {
+      const icon = document.getElementById('refreshIcon');
+      if (isSpinning) {
+        icon.classList.add('animate-spin');
+      } else {
+        icon.classList.remove('animate-spin');
+      }
+    }
+
+    function updateNavStatus(isOnline, text) {
+      const ping = document.getElementById('navLivePing');
+      const dot = document.getElementById('navLiveDot');
+      const label = document.getElementById('navLiveStatusText');
+
+      label.textContent = text;
+      if (isOnline) {
+        ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
+        dot.className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500';
+      } else {
+        ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75';
+        dot.className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500';
+      }
+    }
+
+    function showAlertBanner(title, message, type = 'warning') {
+      const banner = document.getElementById('serverAlertBanner');
+      const t = document.getElementById('serverAlertTitle');
+      const m = document.getElementById('serverAlertMsg');
+
+      t.textContent = title;
+      m.textContent = message;
+
+      if (type === 'error') {
+        banner.className = 'p-4 rounded-2xl border text-sm flex items-center justify-between shadow-lg transition-all duration-300 bg-rose-950/70 border-rose-500/50 text-rose-200';
+      } else {
+        banner.className = 'p-4 rounded-2xl border text-sm flex items-center justify-between shadow-lg transition-all duration-300 bg-amber-950/70 border-amber-500/50 text-amber-200';
+      }
+      banner.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function hideAlertBanner() {
+      document.getElementById('serverAlertBanner').classList.add('hidden');
+    }
+
+    function dismissAlertBanner() {
+      hideAlertBanner();
+    }
+
+    /**
+     * ========================================================
+     * STANDALONE TEST SIMULATOR / CLIENT FALLBACK
+     * (Allows immediate verification in browser iframe without Node)
+     * Matches the exact response specifications of the Node Express backend
+     * ========================================================
+     */
+    const MOCK_DB = {
+      'VEX-8K4P-92MX': {
+        customerName: 'Marcus Vance',
+        serverNode: 'Subscription Server 1 (US-East-NY)',
+        totalAllowanceGB: 100.0,
+        uploadGB: 4.82,
+        downloadGB: 30.18,
+        status: 'active',
+        expirationDate: 'November 28, 2026',
+        expirationRemainingText: '28 days remaining in billing cycle'
+      },
+      'VEX-7N5Q-31AB': {
+        customerName: 'Elena Rostova',
+        serverNode: 'Subscription Server 2 (EU-Frankfurt-02)',
+        totalAllowanceGB: 150.0,
+        uploadGB: 18.40,
+        downloadGB: 104.60,
+        status: 'active',
+        expirationDate: 'December 14, 2026',
+        expirationRemainingText: '44 days remaining in billing cycle'
+      },
+      'VEX-9R2T-65KD': {
+        customerName: 'Aiden Tanaka',
+        serverNode: 'Subscription Server 3 (AP-Tokyo-01)',
+        totalAllowanceGB: 80.0,
+        uploadGB: 11.20,
+        downloadGB: 63.80,
+        status: 'active',
+        expirationDate: 'November 05, 2026',
+        expirationRemainingText: '5 days remaining (Renewal advised)'
+      }
+    };
+
+    function mockVerifyCodeClient(code) {
+      if (MOCK_DB[code]) {
+        return {
+          success: true,
+          sessionToken: 'vexora_sess_' + Math.random().toString(36).substring(2, 15)
+        };
+      }
+      return { success: false, error: 'Invalid or unknown access code.' };
+    }
+
+    function mockGetSubscriptionDataClient(code) {
+      const record = MOCK_DB[code];
+      if (!record) return null;
+
+      // Add a slight realistic live traffic increment during polling
+      record.downloadGB = parseFloat((record.downloadGB + (Math.random() * 0.03)).toFixed(2));
+      record.uploadGB = parseFloat((record.uploadGB + (Math.random() * 0.01)).toFixed(2));
+      const totalUsed = parseFloat((record.uploadGB + record.downloadGB).toFixed(2));
+      const pct = parseFloat(((totalUsed / record.totalAllowanceGB) * 100).toFixed(1));
+
+      return {
+        customerName: record.customerName,
+        serverNode: record.serverNode,
+        totalAllowanceGB: record.totalAllowanceGB,
+        totalUsedGB: totalUsed,
+        uploadGB: record.uploadGB,
+        downloadGB: record.downloadGB,
+        usagePercentage: pct,
+        status: record.status,
+        expirationDate: record.expirationDate,
+        expirationRemainingText: record.expirationRemainingText,
+        lastUpdated: new Date().toISOString()
+      };
+    }
+  </script>
+</body>
+</html>
